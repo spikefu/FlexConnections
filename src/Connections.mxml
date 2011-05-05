@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" applicationComplete="loadLastValues()">
+	
+	<mx:Script>
+		<![CDATA[
+			[Bindable]
+			private var currentSourcePath:String;
+			
+			private var currentFolder:File;
+			
+			private var lso:SharedObject;
+			
+			private var packages:Array = [];
+			
+			private function loadLastValues():void {
+				lso = SharedObject.getLocal("connections");
+				if (lso.data.hasOwnProperty("lastSourcePath")) {
+					currentSourcePath = lso.data.lastSourcePath
+				}
+			}
+			
+			private function browseForSource():void {
+				currentFolder = new File(currentSourcePath);
+				currentFolder.addEventListener(Event.SELECT,openFile);
+				currentFolder.browseForDirectory("Source folder");
+			}
+			
+			private function openFile(event:Event):void {
+				packages = [];
+				currentFolder = event.target as File;
+				currentSourcePath = currentFolder.nativePath;
+				lso.data.lastSourcePath = currentSourcePath;
+				lso.flush();
+				readFiles(currentFolder);
+			}
+			
+			private function readFiles(folder:File):void {
+				var packageInfo:PackageInfo = new PackageInfo(folder);
+				packages.push(packageInfo);
+				var files:Array = folder.getDirectoryListing();
+				for each (var file:File in files) {
+					if (file.isDirectory) {
+						readFiles(file);
+					} else if(file.name.indexOf(".as") > 0 || file.name.indexOf(".mxml") > 0) {
+						var info:SourceInfo = new SourceInfo(file);
+						packageInfo.sources.push(info);
+					}
+					
+				}
+			}
+			
+			
+			
+			
+			
+		]]>
+	</mx:Script>
+	
+	<mx:ApplicationControlBar dock="true">
+		<mx:Button label="Source folder" click="browseForSource()" /><mx:Label text="{currentSourcePath}" />
+	</mx:ApplicationControlBar>
+</mx:WindowedApplication>
